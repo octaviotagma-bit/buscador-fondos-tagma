@@ -3,55 +3,46 @@ import sys
 import time
 from firecrawl import Firecrawl
 
-api_key = os.getenv('FIRECRAWL_API_KEY')
-if not api_key:
-    sys.exit(1)
+app = Firecrawl(api_key=os.getenv('FIRECRAWL_API_KEY'))
 
-app = Firecrawl(api_key=api_key)
-
-# Frases optimizadas: menos es más para el buscador de la API
-queries = [
-    "Tinker Foundation grants 2026",
-    "UNESCO GEM leadership Latin America",
-    "Barakat Trust grants 2026",
-    "sustainable architecture grants Latin America",
-    "bioconstrucción financiamiento 2026"
+# LISTA DE OBJETIVOS (Tus fuentes de la imagen)
+fuentes = [
+    "https://www.fundsforngos.org/category/environment/",
+    "https://www.innpactia.com/convocatorias",
+    "https://nodoka.co/oportunidades",
+    "https://www.grantwatch.com/cat/13/environment-grants.html",
+    "https://www.raci.org.ar/novedades-de-cooperacion-internacional"
 ]
 
+print(f"Iniciando extracción de {len(fuentes)} fuentes expertas...")
+
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
-    f.write("--- REPORTE ESTRATÉGICO TAGMA (DIAGNÓSTICO 2026) ---\n\n")
+    f.write("--- REPORTE DE EXTRACCIÓN DIRECTA TAGMA (2026) ---\n\n")
     
-    for q in queries:
-        print(f"Iniciando búsqueda: {q}")
-        f.write(f"BUSCANDO: {q}\n")
+    for url in fuentes:
+        f.write(f"PROCESANDO FUENTE: {url}\n")
+        f.write("=" * 40 + "\n")
+        
         try:
-            # Buscamos con un límite de 5
-            response = app.search(q, limit=5)
+            # Usamos Scrape para leer la web directamente (esto es lo que funcionó en Playground)
+            # Pedimos el formato 'markdown' que es el más legible
+            response = app.scrape_url(url, params={'formats': ['markdown']})
             
-            # IMPRESIÓN DE DEPURACIÓN: Esto saldrá en tu consola de GitHub
-            print(f"Respuesta de Firecrawl para '{q}': {response}")
+            # Extraemos el texto
+            contenido = response.get('markdown', '')
 
-            # Intentamos extraer datos de 3 formas distintas para no fallar
-            items = []
-            if isinstance(response, dict):
-                items = response.get('data') or response.get('results') or response.get('items', [])
+            if contenido:
+                # Tomamos los primeros 1500 caracteres (lo más relevante del inicio)
+                f.write(contenido[:1500] + "\n\n")
+                print(f"Éxito en {url}")
             else:
-                items = getattr(response, 'data', getattr(response, 'results', []))
+                f.write("No se pudo extraer texto de esta fuente hoy.\n\n")
 
-            if not items:
-                f.write("Status: El buscador no devolvió resultados para esta frase exacta.\n")
-                print(f"Aviso: No se encontraron datos para {q}")
-            else:
-                for item in items:
-                    titulo = item.get('title') or item.get('name', 'Sin título')
-                    link = item.get('url') or item.get('link', 'Sin link')
-                    f.write(f"  [+] {titulo}\n      Link: {link}\n")
-                print(f"Éxito: Se encontraron {len(items)} resultados.")
-            
-            f.write("\n" + "="*30 + "\n\n")
-            time.sleep(20) # Aumentamos a 20s para máxima seguridad con el plan gratis
+            # MUY IMPORTANTE: Esperamos 15 segundos para no agotar tu plan gratuito
+            time.sleep(15) 
 
         except Exception as e:
-            f.write(f"Status: Error técnico ({str(e)})\n\n")
-            print(f"Error en {q}: {e}")
-            time.sleep(30)
+            f.write(f"Error técnico en {url}: {str(e)}\n\n")
+            time.sleep(20)
+
+print("¡Extracción completa! Revisa el archivo de resultados.")
