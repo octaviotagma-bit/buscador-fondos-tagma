@@ -1,60 +1,51 @@
 import os
 import sys
+import time # Nuevo: Para manejar el tiempo
 from firecrawl import Firecrawl
 
-# 1. Conexión segura
 api_key = os.getenv('FIRECRAWL_API_KEY')
 if not api_key:
-    print("ERROR: No se encontró la API Key.")
     sys.exit(1)
 
 app = Firecrawl(api_key=api_key)
 
-# 2. LISTA DE BÚSQUEDAS (Espectro Total TAGMA)
+# Usamos las frases que SÍ te funcionaron en el Playground
 queries = [
-    "subvenciones arquitectura sustentable 2026",
-    "international grants for sustainable architecture 2026",
-    "funding for environmental education NGOs Latin America",
-    "site:innpactia.com fondos",
-    "site:nodoka.co arquitectura",
-    "site:fundsforngos.org environment",
-    "site:grantwatch.com architecture"
+    "international grants funding sustainable education architecture community schools NGOs Latin America 2025-2026",
+    "Tinker Foundation institutional grants 2026",
+    "UNESCO GEM Regional Edition leadership Latin America",
+    "Barakat Trust Grants Programme 2026",
+    "site:innpactia.com convocatorias ambientales"
 ]
 
-print(f"Iniciando búsqueda táctica...")
-
-# 3. Procesar y guardar resultados
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
-    f.write("--- REPORTE ESTRATÉGICO DE FONDOS TAGMA (2026) ---\n\n")
+    f.write("--- REPORTE ESTRATÉGICO TAGMA (VERSIÓN MEJORADA 2026) ---\n\n")
     
     for q in queries:
         f.write(f"BUSCANDO: {q}\n")
-        f.write("-" * (len(q) + 10) + "\n")
-        
         try:
+            # Buscamos y luego ESPERAMOS para respetar el límite gratuito
             response = app.search(q, limit=5)
             
-            # Lógica ultra-robusta para extraer la lista de resultados
+            # Extraemos los datos según el formato nuevo visto en Playground
             items = []
-            if isinstance(response, list):
-                items = response
-            elif isinstance(response, dict):
-                items = response.get('data', response.get('results', []))
+            if isinstance(response, dict):
+                items = response.get('data', [])
             else:
-                # Para objetos tipo SearchData, probamos varios atributos comunes
-                items = getattr(response, 'data', getattr(response, 'results', []))
-            
+                items = getattr(response, 'data', [])
+
             if not items:
-                f.write("Status: No se encontraron resultados específicos en esta fuente.\n\n")
+                f.write("Status: Sin resultados nuevos para este término.\n")
             else:
                 for item in items:
-                    # Intentamos leer como diccionario o como objeto
-                    titulo = item.get('title') if isinstance(item, dict) else getattr(item, 'title', 'Sin título')
-                    link = item.get('url') if isinstance(item, dict) else getattr(item, 'url', 'Sin link')
-                    f.write(f"  > {titulo}\n    Link: {link}\n")
-                f.write("\n")
-                
-        except Exception as e:
-            f.write(f"Status: Error en la conexión ({str(e)})\n\n")
+                    titulo = item.get('title', 'Sin título')
+                    link = item.get('url', 'Sin link')
+                    f.write(f"  [+] {titulo}\n      Link: {link}\n")
+            
+            f.write("\n")
+            print(f"Búsqueda exitosa: {q}. Esperando 15 segundos para la siguiente...")
+            time.sleep(15) # Esto evita el error de "Rate Limit"
 
-print("¡Proceso completado! Archivo generado con detalles de cada búsqueda.")
+        except Exception as e:
+            f.write(f"Status: Pausado o Error ({str(e)})\n\n")
+            time.sleep(20) # Si falla, esperamos un poco más
