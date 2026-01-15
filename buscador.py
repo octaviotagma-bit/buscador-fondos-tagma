@@ -12,7 +12,7 @@ query = "international grants for sustainable architecture and eco-education 202
 print(f"Iniciando búsqueda para: {query}...")
 
 # 3. Usamos la función SEARCH (busca y extrae contenido de los mejores resultados)
-results = app.search(query, params={'limit': 5})
+results = app.search(query, limit=5)
 
 # 4. Guardamos los resultados en un archivo de texto
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
