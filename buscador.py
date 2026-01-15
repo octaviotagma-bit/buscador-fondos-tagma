@@ -5,45 +5,52 @@ from firecrawl import Firecrawl
 
 app = Firecrawl(api_key=os.getenv('FIRECRAWL_API_KEY'))
 
-# Definimos los dominios "madre" para que el robot explore
+# Dominios madre para TAGMA
 dominios = [
     {"url": "https://www.fundsforngos.org", "keyword": "environment"},
-    {"url": "https://www.innpactia.com", "keyword": "convocatorias"},
+    {"url": "https://web.innpactia.com", "keyword": "oportunidades"},
     {"url": "https://nodoka.co", "keyword": "oportunidades"}
 ]
 
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
-    f.write("--- REPORTE INTELIGENTE TAGMA (MAPEO 2026) ---\n\n")
+    f.write("--- REPORTE ESTRATÉGICO TAGMA (2026) ---\n\n")
     
     for sitio in dominios:
-        print(f"Explorando {sitio['url']}...")
+        print(f"Mapeando {sitio['url']}...")
         try:
-            # 1. MAPEAMOS para encontrar el link correcto que no sea 404
+            # 1. MAPEAMOS para encontrar el link vivo
             map_result = app.map(sitio['url'], search=sitio['keyword'])
             
-            # Buscamos el primer link válido que nos devuelva el mapa
+            # Obtenemos la lista de links (objetos LinkResult)
             links = map_result.get('links', []) if isinstance(map_result, dict) else getattr(map_result, 'links', [])
             
             if links:
-                url_real = links[0] # Tomamos la mejor coincidencia
-                f.write(f"LINK ENCONTRADO: {url_real}\n")
+                # CORRECCIÓN: Extraemos el atributo .url del objeto LinkResult
+                primer_resultado = links[0]
+                url_real = primer_resultado.url if hasattr(primer_resultado, 'url') else primer_resultado.get('url')
                 
-                # 2. EXTRAEMOS de ese link real
+                f.write(f"=== FUENTE: {sitio['url']} ===\n")
+                f.write(f"Link detectado: {url_real}\n\n")
+                
+                # 2. EXTRAEMOS de la URL real
+                print(f"Extrayendo de {url_real}...")
                 response = app.scrape(url_real, formats=['markdown'])
+                
                 contenido = response.get('markdown', '') if isinstance(response, dict) else getattr(response, 'markdown', '')
                 
-                if "Manage Consent" in contenido or not contenido:
-                    f.write("Aviso: El sitio bloqueó la lectura directa por cookies.\n\n")
-                else:
+                if contenido:
+                    # Guardamos los primeros 1500 caracteres
                     f.write(contenido[:1500] + "\n\n")
+                else:
+                    f.write("Aviso: No se pudo leer el contenido detallado.\n\n")
                 
                 f.write("-" * 40 + "\n\n")
             else:
-                f.write(f"No se encontró una página de '{sitio['keyword']}' activa en {sitio['url']}\n\n")
+                f.write(f"No se encontraron secciones de '{sitio['keyword']}' en {sitio['url']}\n\n")
             
-            time.sleep(20)
+            time.sleep(20) # Seguridad para plan gratuito
 
         except Exception as e:
-            f.write(f"Error explorando {sitio['url']}: {str(e)}\n\n")
+            f.write(f"Error en {sitio['url']}: {str(e)}\n\n")
 
-print("¡Mapeo y extracción finalizados!")
+print("¡Proceso finalizado con éxito!")
