@@ -2,63 +2,59 @@ import os
 import sys
 from firecrawl import Firecrawl
 
-# 1. Conexión segura con la API
+# 1. Conexión segura
 api_key = os.getenv('FIRECRAWL_API_KEY')
 if not api_key:
-    print("ERROR: No se encontró la API Key en los Secrets de GitHub.")
+    print("ERROR: No se encontró la API Key.")
     sys.exit(1)
 
 app = Firecrawl(api_key=api_key)
 
-# 2. LISTA DE BÚSQUEDAS DIVERSIFICADA (Español, Inglés y Sitios de la Imagen)
+# 2. LISTA DE BÚSQUEDAS (Espectro Total TAGMA)
 queries = [
-    # --- Búsquedas en ESPAÑOL ---
     "subvenciones arquitectura sustentable 2026",
-    "financiamiento educación ambiental latinoamérica",
-    "fondos para proyectos de bioconstrucción y escuelas",
-    "becas para regeneración ecológica y desarrollo comunitario",
-
-    # --- Búsquedas en INGLÉS ---
-    "global grants for green building and sustainable design 2026",
-    "environmental education funding for NGOs Latin America",
-    "sustainable architecture development grants",
-    "climate action funding for educational infrastructure",
-
-    # --- Sitios Específicos de la imagen de TAGMA ---
-    "site:innpactia.com arquitectura",
-    "site:nodoka.co educación ambiental",
-    "site:gestionandote.org fondos",
-    "site:justicefunds.co grants",
-    "site:fundsforngos.org sustainable building",
-    "site:grantwatch.com environmental education",
-    "site:raci.org.ar fondos ambientales",
-    "site:biofin.org funding",
-    "site:restor.eco grants"
+    "international grants for sustainable architecture 2026",
+    "funding for environmental education NGOs Latin America",
+    "site:innpactia.com fondos",
+    "site:nodoka.co arquitectura",
+    "site:fundsforngos.org environment",
+    "site:grantwatch.com architecture"
 ]
 
-print(f"Iniciando búsqueda estratégica ({len(queries)} consultas)...")
+print(f"Iniciando búsqueda táctica...")
 
 # 3. Procesar y guardar resultados
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
     f.write("--- REPORTE ESTRATÉGICO DE FONDOS TAGMA (2026) ---\n\n")
     
     for q in queries:
-        print(f"Buscando: '{q}'...")
+        f.write(f"BUSCANDO: {q}\n")
+        f.write("-" * (len(q) + 10) + "\n")
+        
         try:
-            response = app.search(q, limit=3) # Buscamos los 3 mejores de cada frase
+            response = app.search(q, limit=5)
             
-            # Detectamos el formato de respuesta de forma segura
-            items = response.get('data', []) if isinstance(response, dict) else getattr(response, 'data', [])
+            # Lógica ultra-robusta para extraer la lista de resultados
+            items = []
+            if isinstance(response, list):
+                items = response
+            elif isinstance(response, dict):
+                items = response.get('data', response.get('results', []))
+            else:
+                # Para objetos tipo SearchData, probamos varios atributos comunes
+                items = getattr(response, 'data', getattr(response, 'results', []))
             
-            if items:
-                f.write(f"=== RESULTADOS PARA: {q} ===\n")
+            if not items:
+                f.write("Status: No se encontraron resultados específicos en esta fuente.\n\n")
+            else:
                 for item in items:
-                    titulo = item.get('title', 'Sin título')
-                    link = item.get('url', 'Sin link')
-                    f.write(f"- {titulo}\n  Link: {link}\n")
+                    # Intentamos leer como diccionario o como objeto
+                    titulo = item.get('title') if isinstance(item, dict) else getattr(item, 'title', 'Sin título')
+                    link = item.get('url') if isinstance(item, dict) else getattr(item, 'url', 'Sin link')
+                    f.write(f"  > {titulo}\n    Link: {link}\n")
                 f.write("\n")
                 
         except Exception as e:
-            print(f"Error en la búsqueda '{q}': {e}")
+            f.write(f"Status: Error en la conexión ({str(e)})\n\n")
 
-print("¡Proceso completado con éxito!")
+print("¡Proceso completado! Archivo generado con detalles de cada búsqueda.")
