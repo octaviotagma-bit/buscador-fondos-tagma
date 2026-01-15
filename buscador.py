@@ -1,31 +1,42 @@
 import os
 import sys
-from firecrawl import FirecrawlApp
+from firecrawl import Firecrawl  # Usamos la clase moderna de 2026
 
-# 1. Conexión con la API usando el Secret
+# 1. Conexión segura con la API
 api_key = os.getenv('FIRECRAWL_API_KEY')
 if not api_key:
-    print("Error: No se encontró la API Key en los Secrets.")
+    print("ERROR: No se encontró la API Key en los Secrets de GitHub.")
     sys.exit(1)
 
-app = FirecrawlApp(api_key=api_key)
+app = Firecrawl(api_key=api_key)
 
 # 2. Búsqueda de fondos para TAGMA
 query = "international grants for sustainable architecture and eco-education 2026"
-print(f"Iniciando búsqueda para: {query}...")
+print(f"Buscando: {query}...")
 
-# 3. Función de búsqueda (sin 'params' y con el formato nuevo)
-results = app.search(query, limit=5)
+# 3. Ejecutar búsqueda
+# En la versión actual, search devuelve directamente lo que necesitamos
+response = app.search(query, limit=5)
 
-# 4. Guardar los resultados (usando el formato de 'objeto' nuevo)
+# 4. Procesar y guardar resultados de forma segura
 with open("resultados_fondos.txt", "w", encoding="utf-8") as f:
-    f.write("--- NUEVAS OPORTUNIDADES ENCONTRADAS (TAGMA 2026) ---\n\n")
+    f.write("--- LISTA DE FONDOS ENCONTRADOS (TAGMA) ---\n\n")
     
-    # Aquí está el cambio clave: 'results.data' en lugar de 'results.get'
-    for item in results.data:
-        f.write(f"TÍTULO: {item.title}\n")
-        f.write(f"LINK: {item.url}\n")
-        f.write(f"RESUMEN: {item.description}\n")
-        f.write("-" * 30 + "\n")
+    # Esta parte detecta si los datos vienen en una lista o en un objeto
+    items = response.get('data', []) if isinstance(response, dict) else getattr(response, 'data', [])
+    
+    if not items:
+        f.write("No se encontraron resultados en esta búsqueda.\n")
+    else:
+        for item in items:
+            # Usamos .get por si algún campo viene vacío
+            titulo = item.get('title', 'Sin título')
+            link = item.get('url', 'Sin link')
+            descripcion = item.get('description', 'Sin descripción')
+            
+            f.write(f"TÍTULO: {titulo}\n")
+            f.write(f"LINK: {link}\n")
+            f.write(f"RESUMEN: {descripcion}\n")
+            f.write("-" * 30 + "\n")
 
-print("¡Proceso completado! Los resultados están en resultados_fondos.txt")
+print("¡Éxito! El archivo resultados_fondos.txt ha sido generado.")
